@@ -2,6 +2,12 @@ const RECENT_KEY = "nextgen-recent-searches";
 const BOOKMARKS_KEY = "nextgen-bookmarks";
 const THEME_KEY = "nextgen-theme";
 
+let cachedRecent: string[] = [];
+let cachedRecentRaw = "";
+
+let cachedBookmarks: string[] = [];
+let cachedBookmarksRaw = "";
+
 function notifyChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("local-storage-change"));
@@ -9,11 +15,16 @@ function notifyChange() {
 }
 
 export function getRecentSearches(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return cachedRecent;
   try {
-    return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    const raw = localStorage.getItem(RECENT_KEY) || "[]";
+    if (raw !== cachedRecentRaw) {
+      cachedRecentRaw = raw;
+      cachedRecent = JSON.parse(raw);
+    }
+    return cachedRecent;
   } catch {
-    return [];
+    return cachedRecent;
   }
 }
 
@@ -23,29 +34,40 @@ export function addRecentSearch(word: string): string[] {
   );
   recent.unshift(word);
   const trimmed = recent.slice(0, 10);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(trimmed));
+  const raw = JSON.stringify(trimmed);
+  localStorage.setItem(RECENT_KEY, raw);
+  cachedRecentRaw = raw;
+  cachedRecent = trimmed;
   notifyChange();
   return trimmed;
 }
 
 export function getBookmarks(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return cachedBookmarks;
   try {
-    return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || "[]");
+    const raw = localStorage.getItem(BOOKMARKS_KEY) || "[]";
+    if (raw !== cachedBookmarksRaw) {
+      cachedBookmarksRaw = raw;
+      cachedBookmarks = JSON.parse(raw);
+    }
+    return cachedBookmarks;
   } catch {
-    return [];
+    return cachedBookmarks;
   }
 }
 
 export function toggleBookmark(wordId: string): string[] {
-  const bookmarks = getBookmarks();
+  const bookmarks = [...getBookmarks()];
   const idx = bookmarks.indexOf(wordId);
   if (idx >= 0) {
     bookmarks.splice(idx, 1);
   } else {
     bookmarks.push(wordId);
   }
-  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+  const raw = JSON.stringify(bookmarks);
+  localStorage.setItem(BOOKMARKS_KEY, raw);
+  cachedBookmarksRaw = raw;
+  cachedBookmarks = bookmarks;
   notifyChange();
   return bookmarks;
 }
